@@ -1,0 +1,32 @@
+# Build output
+Debug/
+Release/
+build/
+
+# Object / binary files
+*.o
+*.elf
+*.map
+*.lst
+
+# Build output
+Debug/
+Release/
+build/
+
+# Object / binary files
+*.o
+*.elf
+*.map
+*.lst
+
+# CubeIDE / Eclipse
+.settings/
+.cproject
+.project
+*.launch
+*.ioc~
+
+# macOS
+.DS_Store
+
