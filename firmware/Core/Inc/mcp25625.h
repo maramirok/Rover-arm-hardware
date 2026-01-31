@@ -7,8 +7,10 @@
 
 #ifndef INC_MCP25625_H_
 #define INC_MCP25625_H_
+#pragma once
 #include "stm32g0xx_hal.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 // MCP25625 SPI commands
 #define MCP_CMD_RESET       0xC0
@@ -166,19 +168,19 @@
 
 
 
-
-void MCP_set_config_mode(void);
-void MCP_set_normal_mode(void);
-void MCP_set_sleep_mode(void);
-void MCP_set_loopback_mode(void);
-void MCP_set_listen_mode(void);
+bool MCP_set_config_mode(void);
+bool MCP_set_normal_mode(void);
+bool MCP_set_sleep_mode(void);
+bool MCP_set_loopback_mode(void);
+bool MCP_set_listen_mode(void);
 void MCP_reset(void);
 uint8_t MCP_read_byte(uint8_t address);
+bool MCP_read_bytes(uint8_t address, uint8_t *output, uint8_t length);
 void MCP_write_byte(uint8_t address, uint8_t value);
 void MCP_read_RXB0(uint8_t buff[13]);
 void MCP_read_RXB1(uint8_t buff[13]);
 void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data);
-void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, unint16_t cs_pin);
+void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin);
 static inline bool MCP_confirm_attach(void);
 static bool MCP_confirm_mode(uint8_t mode);
 uint8_t MCP_message_available(void);  // returns CANINTF & (RX0IF|RX1IF)
