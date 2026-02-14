@@ -7,10 +7,8 @@
 
 #ifndef INC_MCP25625_H_
 #define INC_MCP25625_H_
-#pragma once
 #include "stm32g0xx_hal.h"
 #include <stdint.h>
-#include <stdbool.h>
 
 // MCP25625 SPI commands
 #define MCP_CMD_RESET       0xC0
@@ -23,10 +21,6 @@
 #define MCP_CMD_READ_RX_BUF_RXB0D0 0x92
 #define MCP_CMD_READ_RX_BUF_RXB1SIDH 0x94
 #define MCP_CMD_READ_RX_BUF_RXB1D0 0x96
-#define MCP_CMD_RTS_TXB2 0x84
-#define MCP_CMD_RTS_TXB1 0x82
-#define MCP_CMD_RTS_TXB0 0x81
-#define MCP_CMD_RTS_ALL_TX 0x87
 
 #define MCP_RXF0SIDH	0x00
 #define MCP_RXF0SIDL	0x01
@@ -42,8 +36,6 @@
 #define MCP_RXF2EID0	0x0B
 #define MCP_CANSTAT		0x0E
 #define MCP_CANCTRL		0x0F
-
-
 
 #define MCP_RXF3SIDH	0x10
 #define MCP_RXF3SIDL	0x11
@@ -75,16 +67,10 @@
 #define MCP_CANINTF		0x2C
 #define MCP_EFLG		0x2D
 
-
-
 #define MCP_TXB0CTRL	0x30
-#define MCP_TXB0SIDH    0x31
 #define MCP_TXB1CTRL	0x40
-#define MCP_TXB1SIDH    0x41
 #define MCP_TXB2CTRL	0x50
-#define MCP_TXB2SIDH    0x51
 #define MCP_RXB0CTRL	0x60
-#define MCP_RXB1CTRL    0x70
 #define MCP_RXB0SIDH	0x61
 #define MCP_RXB1CTRL	0x70
 #define MCP_RXB1SIDH	0x71
@@ -179,55 +165,30 @@
 #define MCP_RXB1CTRL_FILHIT0 (1U<< 0)
 
 
+
+
+void MCP_set_config_mode(void);
+void MCP_set_normal_mode(void);
+void MCP_set_sleep_mode(void);
+void MCP_set_loopback_mode(void);
+void MCP_set_listen_mode(void);
+void MCP_reset(void);
+uint8_t MCP_read_byte(uint8_t address);
+void MCP_write_byte(uint8_t address, uint8_t value);
+void MCP_read_RXB0(uint8_t buff[13]);
+void MCP_read_RXB1(uint8_t buff[13]);
+void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data);
+void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, unint16_t cs_pin);
+static inline bool MCP_confirm_attach(void);
+static bool MCP_confirm_mode(uint8_t mode);
+bool MCP_init(void);
+
+
 #define MCP_NORMAL_MODE 0x0
 #define MCP_SLEEP_MODE 0x1
 #define MCP_LOOPBACK_MODE 0x2
 #define MCP_LISTEN_MODE 0x3
 #define MCP_CONFIG_MODE 0x4
-
-
-// MCP MODES FUNCTIONS
-bool MCP_set_config_mode(void);
-bool MCP_set_normal_mode(void);
-bool MCP_set_sleep_mode(void);
-bool MCP_set_loopback_mode(void);
-bool MCP_set_listen_mode(void);
-void MCP_reset(void);
-
-// WRITE, READ, AND MODIF.  FUNCTIONS
-
-uint8_t MCP_read_byte(uint8_t address);
-bool MCP_read_bytes(uint8_t address, uint8_t *output, uint8_t length);
-void MCP_write_byte(uint8_t address, uint8_t value);
-bool MCP_write_bytes(uint8_t address, uint8_t const *value, uint8_t length);
-void MCP_read_RXB0(uint8_t buff[13]);
-void MCP_read_RXB1(uint8_t buff[13]);
-void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data);
-
-// INITILIZATION FUNCTIONS
-void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin);
-static inline bool MCP_confirm_attach(void);
-static bool MCP_confirm_mode(uint8_t mode);
-bool MCP_message_available(void);
-bool MCP_init(void);
-void MCP_RTS( uint8_t rts_cmd);
-
-// RX/ TX FUNCTIONS
-bool MCP_receive_raw(uint8_t * rx_buffer_0, int8_t * rx_buffer_1);
-bool MCP_sending_raw(const uint8_t * tx_buffer);
-
-// error detection functions
-
-uint8_t MCP_read_eflg(void);
-uint8_t MCP_read_tec(void);
-uint8_t MCP_read_rec(void);
-void    MCP_clear_rx_overflow(void);
-
-
-// translating can frame  /  creating one
-void MCP_pack_ext_id(uint32_t id29,uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0 );
-uint32_t MCP_unpack_ext_id(uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0);;
-
 
 
 
