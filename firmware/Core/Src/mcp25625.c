@@ -15,16 +15,20 @@ static inline bool MCP_confirm_attach(void) {
 }
 
 
+
+
 static inline void CS_low(void) {
 	HAL_GPIO_WritePin(mcp_cs_port, mcp_cs_pin, GPIO_PIN_RESET);
 }
 
 
-
-
 static inline void CS_high(void) {
 	HAL_GPIO_WritePin(mcp_cs_port, mcp_cs_pin, GPIO_PIN_SET);
 }
+
+
+
+
 
 void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin) {
 	
@@ -47,6 +51,10 @@ void MCP_reset(void)
     HAL_Delay(2); 
 }
 
+
+
+
+
 uint8_t MCP_read_byte(uint8_t address)
 {
 	
@@ -65,38 +73,42 @@ uint8_t MCP_read_byte(uint8_t address)
 
     return rx[2];
 }
+
+
+
+
 bool MCP_read_bytes(uint8_t address, uint8_t *output, uint8_t length) {
-	uint8_t total = 2+length;
-
-	uint8_t tx[2+length];
-	uint8_t rx[2+length];
-
-	if (length > 5) {
-		return false;
-	}
-	tx[0] = MCP_CMD_READ;
-	tx[1] = address;
-
-	for ( int i =0; i < length; i++) {
-		tx[2+i] = 0x00;
-	}
-
-	CS_low();
-	HAL_SPI_TransmitReceive(mcp_hspi, tx, rx, total , HAL_MAX_DELAY);
-	CS_high();
-
-	for ( int i=0; i< length;i++) {
-		out[i] = rx[2+i];
-	}
 
 
-	return true;
+	if (!MCP_confirm_attach()) return false;
+	    if (length == 0) return true;
+	    if (length > 13) return false;
+
+	    uint8_t total = 2 + length;
+	    uint8_t tx[15] = {0};
+	    uint8_t rx[15] = {0};
+
+	    tx[0] = MCP_CMD_READ;
+	    tx[1] = address;
+
+
+	    CS_low();
+	    (void)HAL_SPI_TransmitReceive(mcp_hspi, tx, rx, total, HAL_MAX_DELAY);
+	    CS_high();
+
+	    for (uint8_t i = 0; i < length; i++) {
+	        output[i] = rx[2 + i];
+	    }
+	    return true;
 }
+
+
+
 
 void MCP_write_byte (uint8_t address, uint8_t value)
 {
 	if (!MCP_confirm_attach()) {
-			return 0xFF;
+			return;
 		}
 	
     uint8_t tx[3] = { MCP_CMD_WRITE, address, value };
@@ -106,11 +118,46 @@ void MCP_write_byte (uint8_t address, uint8_t value)
     CS_high();
 }
 
+
+
+
+
+
+bool MCP_write_bytes(uint8_t address, uint8_t const *value, uint8_t length) {
+	if (!MCP_confirm_attach()) return false;
+		    if (length == 0) return true;
+		    if (length > 13) return false;
+
+		  uint8_t total = 2+length;
+		  uint8_t tx[15] = {0};
+
+		  tx[0]= MCP_CMD_WRITE;
+		  tx[1] = address;
+
+		  for ( int i =0; i <length; i++) {
+			  tx[2+i] = value[i];
+		  }
+
+
+		  CS_low();
+		  bool ok = (HAL_SPI_Transmit(mcp_hspi, tx, total, HAL_MAX_DELAY) == HAL_OK);
+		  CS_high();
+
+		  return ok;
+
+
+}
+
+
+
+
+
+
 void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data)
 {
 	
 	if (!MCP_confirm_attach()) {
-			return 0xFF;
+			return;
 		}
     uint8_t tx[4] = { MCP_CMD_BIT_MODIFY, address, mask, data };
 
@@ -119,14 +166,25 @@ void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data)
     CS_high();
 }
 
+
+
 static bool MCP_confirm_mode(uint8_t mode ) {
 	uint8_t canstat = MCP_read_byte(MCP_CANSTAT);
-	uint8_t canctrl = MCP_read_btye(MCP_CANCTRL);
 	
 	return (((canstat >>5) & 0x07) == (mode & 0x07));
-	return (((canctrl >>5) & 0x07) == (mode & 0x07));
 	
 }
+
+
+void MCP_RTS( uint8_t rts_cmd) {
+
+
+	CS_low();
+	(void)HAL_SPI_Transmit(mcp_hspi, &rts_cmd, 1, HAL_MAX_DELAY);
+	CS_high();
+}
+
+
 
 bool MCP_init(void) {
 	
@@ -157,6 +215,10 @@ bool MCP_init(void) {
 	
 	
 }
+
+
+
+
 // values used in these next values are the values of each mode found on p.53 of the mcp25625 datasheet
 bool MCP_set_config_mode(void) {
 	MCP_bit_modify(MCP_CANCTRL,MCP_CANCTRL_REQOP_Msk ,0x80);
@@ -171,6 +233,7 @@ bool MCP_set_config_mode(void) {
 	return false;
 }
 bool MCP_set_normal_mode(void) {
+
 	MCP_bit_modify(MCP_CANCTRL,MCP_CANCTRL_REQOP_Msk ,0x00);
 	for ( int i =0; i < 1000; i++) {
 			uint8_t canstat = MCP_read_byte(MCP_CANSTAT);
@@ -183,6 +246,9 @@ bool MCP_set_normal_mode(void) {
 
 
 }
+
+
+
 bool MCP_set_sleep_mode(void) {
 
 	MCP_bit_modify(MCP_CANCTRL,MCP_CANCTRL_REQOP_Msk ,0x20);
@@ -195,6 +261,8 @@ bool MCP_set_sleep_mode(void) {
 			}
 			return false;
 }
+
+
 bool MCP_set_loopback_mode(void) {
 	MCP_bit_modify(MCP_CANCTRL,MCP_CANCTRL_REQOP_Msk ,0x40);
 			for ( int i =0; i < 1000; i++) {
@@ -207,6 +275,8 @@ bool MCP_set_loopback_mode(void) {
 				return false;
 
 }
+
+
 bool MCP_set_listen_mode(void) {
 	MCP_bit_modify(MCP_CANCTRL,MCP_CANCTRL_REQOP_Msk ,0x60);
 			for ( int i =0; i < 1000; i++) {
@@ -218,24 +288,35 @@ bool MCP_set_listen_mode(void) {
 				}
 				return false;
 }
+
+
+
 bool MCP_message_available(void) {
 	uint8_t canintf = MCP_read_byte(MCP_CANINTF);
     return (canintf & (MCP_CANINTF_RX0IF | MCP_CANINTF_RX1IF )) !=0;
 }
+
+
+
 
 bool MCP_receive_raw(uint8_t * rx_buffer_0, uint8_t * rx_buffer_1) {
 
 
 
 		uint8_t canintf = MCP_read_byte(MCP_CANINTF);
+
 	 if ( canintf & MCP_CANINTF_RX0IF) {
-		 MCP_read_bytes(MCP_RXB0SIDH, rx_buffer_0, 13);
+		if( !MCP_read_bytes(MCP_RXB0SIDH, rx_buffer_0, 13)) {
+			return false;
+		}
 		 MCP_bit_modify(MCP_CANINTF, MCP_CANINTF_RX0IF, 0x00);
 
 	     return true;
 	     }
 	 if ( canintf & MCP_CANINTF_RX1IF) {
-	 		 MCP_read_bytes(MCP_RXB1SIDH, rx_buffer_1, 13);
+	 	if (!MCP_read_bytes(MCP_RXB1SIDH, rx_buffer_1, 13)) {
+	 			 return false;
+	 		 }
 	 		 MCP_bit_modify(MCP_CANINTF, MCP_CANINTF_RX1IF, 0x00);
 
 	 	     return true;
@@ -243,3 +324,94 @@ bool MCP_receive_raw(uint8_t * rx_buffer_0, uint8_t * rx_buffer_1) {
 
 	 return false;
 }
+
+
+bool MCP_sending_raw(const uint8_t * tx_buffer)  {
+
+	uint8_t txb0ctrl = MCP_read_byte(MCP_TXB0CTRL);
+
+	if ( (txb0ctrl & MCP_TXB0CTRL_TXREQ) ==0) {
+		if(!MCP_write_bytes(MCP_TXB0SIDH, tx_buffer,13)) {
+			return false;
+		}
+		MCP_RTS(MCP_CMD_RTS_TXB0);
+		return true;
+	}
+
+	uint8_t txb1ctrl = MCP_read_byte(MCP_TXB1CTRL);
+
+	if ( (txb1ctrl & MCP_TXB1CTRL_TXREQ) ==0) {
+			if(!MCP_write_bytes(MCP_TXB1SIDH, tx_buffer,13)) {
+				return false;
+			}
+			MCP_RTS(MCP_CMD_RTS_TXB1);
+			return true;
+		}
+
+	uint8_t txb2ctrl = MCP_read_byte(MCP_TXB2CTRL);
+
+	if ( (txb2ctrl & MCP_TXB2CTRL_TXREQ) ==0) {
+			if(!MCP_write_bytes(MCP_TXB2SIDH, tx_buffer,13)) {
+				return false;
+			}
+
+			MCP_RTS(MCP_CMD_RTS_TXB2);
+			return true;
+		}
+
+
+	return false;
+}
+
+
+uint8_t MCP_read_eflg(void) {
+	return MCP_read_byte(MCP_EFLG);
+}
+
+
+
+
+uint8_t MCP_read_tec(void)   {
+	return MCP_read_byte(MCP_TEC);
+}
+
+
+
+uint8_t MCP_read_rec(void) {
+	return MCP_read_byte(MCP_REC);
+}
+
+
+
+void    MCP_clear_rx_overflow(void) {
+
+	MCP_bit_modify(MCP_EFLG,MCP_EFLG_RX1OVR, 0x00);
+
+	MCP_bit_modify(MCP_EFLG,MCP_EFLG_RX0OVR, 0x00);
+}
+// test-commit
+
+
+// can frame packing / unpacking
+
+
+
+
+
+void MCP_pack_ext_id(uint32_t id29,uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0 );
+
+
+
+uint32_t MCP_unpack_ext_id(uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0) {
+	uint32_t ext_full_id = 0;
+
+	id |= ((uint32_t)sidh << 21 );
+
+
+}
+
+
+
+
+
+
