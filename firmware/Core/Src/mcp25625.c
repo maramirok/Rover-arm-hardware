@@ -413,7 +413,7 @@ static void mcp_pack_ext_id_29(uint32_t id, uint8_t raw[13])
 
     raw[1] = (uint8_t)(
           (((id >> 18) & 0x07) << 5)
-        | (1U << 3)                 // EXIDE = 1
+        | (1U << 3)
         | ((id >> 16) & 0x03)
     );
 
@@ -458,7 +458,7 @@ static void mcp_unpack_raw_to_frame(const uint8_t raw[13], CanFrame *out)
     }
 }
 
-// ---- PUBLIC (these ARE in your header) ----
+
 
 bool MCP_send_frame(const CanFrame *frame)
 {
@@ -481,8 +481,7 @@ bool MCP_receive_frame(CanFrame *frame)
         return false;
     }
 
-    // Your MCP_receive_raw reads either RXB0 or RXB1 and clears the flag.
-    // Detect which buffer got filled:
+
     bool raw0_used = (raw0[0] != 0) || (raw0[1] != 0) || (raw0[4] != 0);
     bool raw1_used = (raw1[0] != 0) || (raw1[1] != 0) || (raw1[4] != 0);
 
@@ -495,7 +494,7 @@ bool MCP_receive_frame(CanFrame *frame)
         return true;
     }
 
-    // fallback: prefer raw0 if it looks non-empty
+
     if (raw0_used) {
         mcp_unpack_raw_to_frame(raw0, frame);
         return true;
