@@ -185,6 +185,13 @@
 #define MCP_LISTEN_MODE 0x3
 #define MCP_CONFIG_MODE 0x4
 
+typedef struct {
+	uint32_t id;
+	uint8_t dlc;
+	uint8_t data[8];
+
+}Can_frame;
+
 
 // MCP MODES FUNCTIONS
 bool MCP_set_config_mode(void);
@@ -224,9 +231,8 @@ uint8_t MCP_read_rec(void);
 void    MCP_clear_rx_overflow(void);
 
 
-// translating can frame  /  creating one
-void MCP_pack_ext_id(uint32_t id29,uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0 );
-uint32_t MCP_unpack_ext_id(uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0);;
+bool MCP_send_frame( const Can_frame* frame);
+bool MCP_receive_frame( Can_frame* frame);
 
 
 

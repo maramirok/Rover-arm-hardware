@@ -389,16 +389,11 @@ void    MCP_clear_rx_overflow(void) {
 
 	MCP_bit_modify(MCP_EFLG,MCP_EFLG_RX0OVR, 0x00);
 }
-// test-commit
-
-
-// can frame packing / unpacking
 
 
 
 
 
-void MCP_pack_ext_id(uint32_t id29,uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0 );
 
 
 
@@ -410,7 +405,108 @@ uint32_t MCP_unpack_ext_id(uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t 
 
 }
 
+static void mcp_pack_ext_id_29(uint32_t id, uint8_t raw[13])
+{
+    id &= 0x1FFFFFFF;
 
+    raw[0] = (uint8_t)(id >> 21);
+
+    raw[1] = (uint8_t)(
+          (((id >> 18) & 0x07) << 5)
+        | (1U << 3)                 // EXIDE = 1
+        | ((id >> 16) & 0x03)
+    );
+
+    raw[2] = (uint8_t)(id >> 8);
+    raw[3] = (uint8_t)(id >> 0);
+}
+
+static uint32_t mcp_unpack_ext_id_29(const uint8_t raw[13])
+{
+    uint32_t id = 0;
+    id |= ((uint32_t)raw[0]) << 21;
+    id |= ((uint32_t)((raw[1] >> 5) & 0x07)) << 18;
+    id |= ((uint32_t)(raw[1] & 0x03)) << 16;
+    id |= ((uint32_t)raw[2]) << 8;
+    id |= ((uint32_t)raw[3]) << 0;
+    return id & 0x1FFFFFFF;
+}
+
+static void mcp_pack_frame_to_raw(const CanFrame *f, uint8_t raw[13])
+{
+    mcp_pack_ext_id_29(f->id, raw);
+
+    uint8_t dlc = f->dlc & 0x0F;
+    if (dlc > 8) dlc = 8;
+    raw[4] = dlc;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        raw[5 + i] = f->data[i];
+    }
+}
+
+static void mcp_unpack_raw_to_frame(const uint8_t raw[13], CanFrame *out)
+{
+    out->id = mcp_unpack_ext_id_29(raw);
+
+    uint8_t dlc = raw[4] & 0x0F;
+    if (dlc > 8) dlc = 8;
+    out->dlc = dlc;
+
+    for (uint8_t i = 0; i < 8; i++) {
+        out->data[i] = raw[5 + i];
+    }
+}
+
+// ---- PUBLIC (these ARE in your header) ----
+
+bool MCP_send_frame(const CanFrame *frame)
+{
+    if (frame == NULL) return false;
+
+    uint8_t raw[13] = {0};
+    mcp_pack_frame_to_raw(frame, raw);
+
+    return MCP_sending_raw(raw);
+}
+
+bool MCP_receive_frame(CanFrame *frame)
+{
+    if (frame == NULL) return false;
+
+    uint8_t raw0[13] = {0};
+    uint8_t raw1[13] = {0};
+
+    if (!MCP_receive_raw(raw0, raw1)) {
+        return false;
+    }
+
+    // Your MCP_receive_raw reads either RXB0 or RXB1 and clears the flag.
+    // Detect which buffer got filled:
+    bool raw0_used = (raw0[0] != 0) || (raw0[1] != 0) || (raw0[4] != 0);
+    bool raw1_used = (raw1[0] != 0) || (raw1[1] != 0) || (raw1[4] != 0);
+
+    if (raw0_used && !raw1_used) {
+        mcp_unpack_raw_to_frame(raw0, frame);
+        return true;
+    }
+    if (raw1_used && !raw0_used) {
+        mcp_unpack_raw_to_frame(raw1, frame);
+        return true;
+    }
+
+    // fallback: prefer raw0 if it looks non-empty
+    if (raw0_used) {
+        mcp_unpack_raw_to_frame(raw0, frame);
+        return true;
+    }
+    if (raw1_used) {
+        mcp_unpack_raw_to_frame(raw1, frame);
+        return true;
+    }
+
+    return false;
+}
 
 
 
