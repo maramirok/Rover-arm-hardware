@@ -397,13 +397,6 @@ void    MCP_clear_rx_overflow(void) {
 
 
 
-uint32_t MCP_unpack_ext_id(uint8_t sidh, uint8_t sidl, uint8_t ex_id_8, uint8_t ex_id_0) {
-	uint32_t ext_full_id = 0;
-
-	id |= ((uint32_t)sidh << 21 );
-
-
-}
 
 static void mcp_pack_ext_id_29(uint32_t id, uint8_t raw[13])
 {
@@ -469,6 +462,7 @@ bool MCP_send_frame(const CanFrame *frame)
 
     return MCP_sending_raw(raw);
 }
+
 
 bool MCP_receive_frame(CanFrame *frame)
 {

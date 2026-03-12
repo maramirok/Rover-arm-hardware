@@ -18,6 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "mcp25625.h"
+#include "protocol.h"
+#include <math.h>
+#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -102,17 +106,157 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
+  // starting up the timers for the pwm for each motor
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+
+// mcu startup
+
+MCP_attach(&hspi1,CS_GPIO_Port, CS_Pin );
+
+if (!MCP_init()) {
+	Error_Handler();
+}
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
+	  CanFrame frame = {0};
 
-    /* USER CODE BEGIN 3 */
+	  // this setup assumes that we will be receiving first the pwm value ( data 0 to 3), then the direction value
+	      if (MCP_receive_frame(&frame))
+	      {
+	          if (frame.id == FORCE_STOP_ID)
+	          {
+	              // handle force stop
+	          }
+	          else if (frame.id == RESUME_ID)
+	          {
+	              // handle resume
+	          }
+	          else if (frame.id == MOTOR_1_ID)
+	          {
+
+	              float rads;
+	        	  memcpy(&rads, &frame.data[0], 4);
+
+	        	  uint8_t direction = frame.data[4];
+
+	        	  uint16_t  duty = (fabsf(rads) / MAX_RADS) * 999;
+
+	        	  if (duty > 999) duty =999;
+
+	        	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty);
+
+	        	  if ( direction == 1) {
+	        		  HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_SET);
+	        	  }
+	        	  else {
+	        		  HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_RESET);
+	        	  }
+	          }
+
+
+
+
+	          else if (frame.id == MOTOR_2_ID)
+	          {
+	        	  float rads;
+	        	  memcpy(&rads, &frame.data[0], 4);
+
+	        	  uint8_t direction = frame.data[4];
+
+	        	  uint16_t  duty = (fabsf(rads) / MAX_RADS) * 999;
+
+	        	  if (duty > 999) duty =999;
+
+	        	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty);
+
+	        	   if ( direction == 1) {
+	        	  	    HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_SET);
+	        	  	      }
+	        	   else {
+	        	  	    HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_RESET);
+	        	  	      }
+	          }
+
+
+	          else if (frame.id == MOTOR_3_ID) {
+
+	        	                  float rads;
+	        	  	        	  memcpy(&rads, &frame.data[0], 4);
+
+	        	  	        	  uint8_t direction = frame.data[4];
+
+	        	  	        	  uint16_t  duty = (fabsf(rads) / MAX_RADS) * 999;
+
+	        	  	        	  if (duty > 999) duty =999;
+
+	        	  	        	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
+
+	        	  	        	   if ( direction == 1) {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_SET);
+	        	  	        	  	      }
+	        	  	        	   else {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_RESET);
+	        	  	        	  	      }
+
+	          }
+	          else if (frame.id == MOTOR_4_ID) {
+
+	        	                  float rads;
+	        	  	        	  memcpy(&rads, &frame.data[0], 4);
+
+	        	  	        	  uint8_t direction = frame.data[4];
+
+	        	  	        	  uint16_t  duty = (fabsf(rads) / MAX_RADS) * 999;
+
+	        	  	        	  if (duty > 999) duty =999;
+
+	        	  	        	  __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, duty);
+
+	        	  	        	   if ( direction == 1) {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_SET);
+	        	  	        	  	      }
+	        	  	        	   else {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_RESET);
+	        	  	        	  	      }
+
+	           }
+	          else if (frame.id == MOTOR_5_ID) {
+
+	        	  float rads;
+	        	  	        	  memcpy(&rads, &frame.data[0], 4);
+
+	        	  	        	  uint8_t direction = frame.data[4];
+
+	        	  	        	  uint16_t  duty = (fabsf(rads) / MAX_RADS) * 999;
+
+	        	  	        	  if (duty > 999) duty =999;
+
+	        	  	        	  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, duty);
+
+	        	  	        	   if ( direction == 1) {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_SET);
+	        	  	        	  	      }
+	        	  	        	   else {
+	        	  	        	  	    HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_RESET);
+	        	  	        	  	      }
+	          }
+
+
   }
-  /* USER CODE END 3 */
+
+	      HAL_IWDG_Refresh(&hiwdg);
+
 }
 
 /**
@@ -153,7 +297,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
@@ -251,7 +395,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
+  htim1.Init.Prescaler = 63;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 65535;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -344,7 +488,7 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
+  htim3.Init.Prescaler = 63;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

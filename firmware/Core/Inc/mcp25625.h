@@ -190,7 +190,7 @@ typedef struct {
 	uint8_t dlc;
 	uint8_t data[8];
 
-}Can_frame;
+}CanFrame;
 
 
 // MCP MODES FUNCTIONS
@@ -233,6 +233,7 @@ void    MCP_clear_rx_overflow(void);
 
 bool MCP_send_frame( const Can_frame* frame);
 bool MCP_receive_frame( Can_frame* frame);
+
 
 
 
