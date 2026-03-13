@@ -127,21 +127,40 @@ if (!MCP_init()) {
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+static uint32_t last_led_toggle = 0;
+
 while (1)
 {
+
+
+
+
+	if (HAL_GetTick() - last_led_toggle >= 500) {
+	    HAL_GPIO_TogglePin(GPIOB, RUN_LED_Pin);
+	    last_led_toggle = HAL_GetTick();
+	}
+
     CanFrame frame = {0};
 
     // this setup assumes that we will be receiving first the pwm value ( data 0 to 3), then the direction value
     if (MCP_receive_frame(&frame))
     {
-        if (frame.id == FORCE_STOP_ID)
-        {
-            // handle force stop
-        }
+    	if (memcmp(frame.data, "E070", 4) == 0) {
+
+    		stop_motors();
+    		HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
+    	}
         else if (frame.id == RESUME_ID)
         {
-            // handle resume
+        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+        	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+        	HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+
         }
+
         else if (frame.id == MOTOR_1_ID)
         {
             float rads;
@@ -207,6 +226,22 @@ while (1)
             else
                 HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_RESET);
         }
+    }  //hello
+
+
+    uint8_t eflg = MCP_read_eflg();
+
+    if (eflg & (MCP_EFLG_RX1OVR | MCP_EFLG_RX0OVR)) {
+        // buffer overflow — frames were lost
+        HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET); // turn on (active low OD)
+        MCP_clear_rx_overflow();
+        stop_motors(); // safety — stop motors if we're losing frames
+    }
+
+    if (eflg & (MCP_EFLG_TXBO | MCP_EFLG_TXEP | MCP_EFLG_RXEP)) {
+        // bus error — something wrong with CAN bus
+        HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
+        stop_motors();
     }
 
     HAL_IWDG_Refresh(&hiwdg);
