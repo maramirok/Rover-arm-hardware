@@ -501,6 +501,12 @@ bool MCP_receive_frame(CanFrame *frame)
     return false;
 }
 
+void MCP_recover_bus(void) {
+    MCP_reset();        // sends SPI reset command to MCP25625
+    HAL_Delay(10);      // wait for reset to complete
+    MCP_init();         // reinitialize — sets up bit timing, filters, mode etc.
+}
+
 
 
 

@@ -22,7 +22,6 @@
 #include "protocol.h"
 #include <math.h>
 #include <string.h>
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -100,23 +99,27 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_IWDG_Init();
+
   MX_SPI1_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
+  CanFrame frame = {0};
 
   // starting up the timers for the pwm for each motor
+
+
 HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
 HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 
+
 // mcu startup
 
 MCP_attach(&hspi1,CS_GPIO_Port, CS_Pin );
-
 if (!MCP_init()) {
 	Error_Handler();
 }
@@ -125,128 +128,188 @@ if (!MCP_init()) {
 
   /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-static uint32_t last_led_toggle = 0;
+
 
 while (1)
-{
+ {
+     HAL_IWDG_Refresh(&hiwdg);
+     HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+
+     if (MCP_receive_frame(&frame))
+     {
+         if (frame.id == FORCE_STOP_ID) {
+
+             stop_motors();
+
+             CanFrame hb_frame = {0};
+             hb_frame.id = HEARTBEAT_ID;
+             hb_frame.dlc = 4;
+             hb_frame.data[0] = 'E';
+             hb_frame.data[1] = '0';
+             hb_frame.data[2] = '7';
+             hb_frame.data[3] = '0';
+
+             while (1) {
+                 HAL_IWDG_Refresh(&hiwdg);
+                 MCP_send_frame(&hb_frame);
+                 HAL_Delay(100);
+                 CanFrame rx = {0};
+                        if (MCP_receive_frame(&rx)) {
+                            if (rx.id == RESUME_ID) {
+                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+                                HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+                                break;
+                            }
+                        }
+                    }
 
 
+         }
+         else if (frame.id == RESUME_ID)
+         {
+             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+             HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+         }
+         else if (frame.id == MOTOR_1_ID)
+         {
+             float rads;
+             memcpy(&rads, &frame.data[0], 4);
+             uint8_t direction = frame.data[4];
+             uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
+             if (duty > 999) duty = 999;
+             __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty);
+             if (direction == 1)
+                 HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_SET);
+             else
+                 HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_RESET);
+         }
+         else if (frame.id == MOTOR_2_ID)
+         {
+             float rads;
+             memcpy(&rads, &frame.data[0], 4);
+             uint8_t direction = frame.data[4];
+             uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
+             if (duty > 999) duty = 999;
+             __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty);
+             if (direction == 1)
+                 HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_SET);
+             else
+                 HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_RESET);
+         }
+         else if (frame.id == MOTOR_3_ID)
+         {
+             float rads;
+             memcpy(&rads, &frame.data[0], 4);
+             uint8_t direction = frame.data[4];
+             uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
+             if (duty > 999) duty = 999;
+             __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
+             if (direction == 1)
+                 HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_SET);
+             else
+                 HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_RESET);
+         }
+         else if (frame.id == MOTOR_4_ID)
+         {
+             float rads;
+             memcpy(&rads, &frame.data[0], 4);
+             uint8_t direction = frame.data[4];
+             uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
+             if (duty > 999) duty = 999;
+             __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, duty);
+             if (direction == 1)
+                 HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_SET);
+             else
+                 HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_RESET);
+         }
+         else if (frame.id == MOTOR_5_ID)
+         {
+             float rads;
+             memcpy(&rads, &frame.data[0], 4);
+             uint8_t direction = frame.data[4];
+             uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
+             if (duty > 999) duty = 999;
+             __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, duty);
+             if (direction == 1)
+                 HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_SET);
+             else
+                 HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_RESET);
+         }
+     }
 
+     uint8_t eflg = MCP_read_eflg();
 
-	if (HAL_GetTick() - last_led_toggle >= 500) {
-	    HAL_GPIO_TogglePin(GPIOB, RUN_LED_Pin);
-	    last_led_toggle = HAL_GetTick();
-	}
+     if (eflg & (MCP_EFLG_RX1OVR | MCP_EFLG_RX0OVR)) {
+         MCP_clear_rx_overflow();
 
-    CanFrame frame = {0};
+         CanFrame warning_frame = {0};
+         warning_frame.id = WARNING_ID;
+         warning_frame.dlc = 4;
+         warning_frame.data[0] = 'W';
+         warning_frame.data[1] = '0';
+         warning_frame.data[2] = '0';
+         warning_frame.data[3] = '1';
 
-    // this setup assumes that we will be receiving first the pwm value ( data 0 to 3), then the direction value
-    if (MCP_receive_frame(&frame))
-    {
-    	if (memcmp(frame.data, "E070", 4) == 0) {
+         while (1) {
+             HAL_IWDG_Refresh(&hiwdg);
+             MCP_send_frame(&warning_frame);
+             HAL_Delay(100);
 
-    		stop_motors();
-    		HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
-    	}
-        else if (frame.id == RESUME_ID)
-        {
-        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-        	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-        	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-        	HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+             CanFrame rx = {0};
+             if (MCP_receive_frame(&rx)) {
+                 if (rx.id == RESUME_ID)
+                     break;
+             }
+         }
+     }
 
-        }
+     if (eflg & (MCP_EFLG_TXBO | MCP_EFLG_TXEP | MCP_EFLG_RXEP)) {
+         stop_motors();
+         HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
 
-        else if (frame.id == MOTOR_1_ID)
-        {
-            float rads;
-            memcpy(&rads, &frame.data[0], 4);
-            uint8_t direction = frame.data[4];
-            uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
-            if (duty > 999) duty = 999;
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, duty);
-            if (direction == 1)
-                HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_SET);
-            else
-                HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin, GPIO_PIN_RESET);
-        }
-        else if (frame.id == MOTOR_2_ID)
-        {
-            float rads;
-            memcpy(&rads, &frame.data[0], 4);
-            uint8_t direction = frame.data[4];
-            uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
-            if (duty > 999) duty = 999;
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, duty);
-            if (direction == 1)
-                HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_SET);
-            else
-                HAL_GPIO_WritePin(GPIOB, M2_DIR_Pin, GPIO_PIN_RESET);
-        }
-        else if (frame.id == MOTOR_3_ID)
-        {
-            float rads;
-            memcpy(&rads, &frame.data[0], 4);
-            uint8_t direction = frame.data[4];
-            uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
-            if (duty > 999) duty = 999;
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, duty);
-            if (direction == 1)
-                HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_SET);
-            else
-                HAL_GPIO_WritePin(GPIOB, M3_DIR_Pin, GPIO_PIN_RESET);
-        }
-        else if (frame.id == MOTOR_4_ID)
-        {
-            float rads;
-            memcpy(&rads, &frame.data[0], 4);
-            uint8_t direction = frame.data[4];
-            uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
-            if (duty > 999) duty = 999;
-            __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_4, duty);
-            if (direction == 1)
-                HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_SET);
-            else
-                HAL_GPIO_WritePin(GPIOB, M4_DIR_Pin, GPIO_PIN_RESET);
-        }
-        else if (frame.id == MOTOR_5_ID)
-        {
-            float rads;
-            memcpy(&rads, &frame.data[0], 4);
-            uint8_t direction = frame.data[4];
-            uint16_t duty = (fabsf(rads) / MAX_RADS) * 999;
-            if (duty > 999) duty = 999;
-            __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, duty);
-            if (direction == 1)
-                HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_SET);
-            else
-                HAL_GPIO_WritePin(GPIOB, M5_DIR_Pin, GPIO_PIN_RESET);
-        }
-    }  //hello
+         CanFrame error_frame = {0};
+         error_frame.id = WARNING_ID;
+         error_frame.dlc = 4;
+         error_frame.data[0] = 'E';
+         error_frame.data[1] = '0';
+         error_frame.data[2] = '0';
+         error_frame.data[3] = '1';
 
+         while (1) {
+             HAL_IWDG_Refresh(&hiwdg);
+             MCP_send_frame(&error_frame);
+             HAL_Delay(100);
 
-    uint8_t eflg = MCP_read_eflg();
+             CanFrame rx = {0};
+             if (MCP_receive_frame(&rx)) {
+                 if (rx.id == RESUME_ID) {
+                     MCP_recover_bus();
+                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+                     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+                     HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+                     break;
+                 }
+             }
+         }
+     }
 
-    if (eflg & (MCP_EFLG_RX1OVR | MCP_EFLG_RX0OVR)) {
-        // buffer overflow — frames were lost
-        HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET); // turn on (active low OD)
-        MCP_clear_rx_overflow();
-        stop_motors(); // safety — stop motors if we're losing frames
-    }
-
-    if (eflg & (MCP_EFLG_TXBO | MCP_EFLG_TXEP | MCP_EFLG_RXEP)) {
-        // bus error — something wrong with CAN bus
-        HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
-        stop_motors();
-    }
-
-    HAL_IWDG_Refresh(&hiwdg);
-
+ }
 }
+
+
+
+
+  /* USER CODE END 3 */
+
 
 /**
   * @brief System Clock Configuration
@@ -264,13 +327,11 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV1;
   RCC_OscInitStruct.PLL.PLLN = 8;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
@@ -292,6 +353,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
+  /** Enables the Clock Security System
+  */
+  HAL_RCC_EnableCSS();
 }
 
 /**
@@ -346,7 +411,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -445,7 +510,7 @@ static void MX_TIM1_Init(void)
   sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_HIGH;
   sBreakDeadTimeConfig.Break2Filter = 0;
   sBreakDeadTimeConfig.Break2AFMode = TIM_BREAK_AFMODE_INPUT;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
   if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
   {
     Error_Handler();
@@ -539,11 +604,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin|M2_DIR_Pin|M3_DIR_Pin|M4_DIR_Pin
-                          |M5_DIR_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin|RUN_LED_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, M1_DIR_Pin|M2_DIR_Pin|M3_DIR_Pin|PANIC_LED_Pin
+                          |RUN_LED_Pin|M4_DIR_Pin|M5_DIR_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PC13 PC14 PC15 PC7 */
   GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_7;
@@ -589,7 +651,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = PANIC_LED_Pin|RUN_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD0 PD1 PD2 PD3 */

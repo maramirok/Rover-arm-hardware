@@ -213,14 +213,14 @@ void MCP_bit_modify(uint8_t address, uint8_t mask, uint8_t data);
 
 // INITILIZATION FUNCTIONS
 void MCP_attach(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin);
-static inline bool MCP_confirm_attach(void);
-static bool MCP_confirm_mode(uint8_t mode);
+
+
 bool MCP_message_available(void);
 bool MCP_init(void);
 void MCP_RTS( uint8_t rts_cmd);
 
 // RX/ TX FUNCTIONS
-bool MCP_receive_raw(uint8_t * rx_buffer_0, int8_t * rx_buffer_1);
+bool MCP_receive_raw(uint8_t * rx_buffer_0, uint8_t * rx_buffer_1);
 bool MCP_sending_raw(const uint8_t * tx_buffer);
 
 // error detection functions
@@ -231,9 +231,10 @@ uint8_t MCP_read_rec(void);
 void    MCP_clear_rx_overflow(void);
 
 
-bool MCP_send_frame( const Can_frame* frame);
-bool MCP_receive_frame( Can_frame* frame);
+bool MCP_send_frame( const CanFrame* frame);
+bool MCP_receive_frame( CanFrame* frame);
 
+void MCP_recover_bus(void);
 
 
 
