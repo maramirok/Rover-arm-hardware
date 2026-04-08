@@ -17,8 +17,8 @@
 
 // id for each bkstruction
 
-#define force_stop_id_bit 0b01
-#define resume_id_bit 0b10
+#define force_stop_id_bit 0b00
+#define resume_id_bit 0b01
 #define error_id_bit 0b11
 #define warning_id_bit 0b100
 #define motor_1_id_bit 0b1001
@@ -33,8 +33,8 @@
 
 // making each id
 
-#define MAKE_ID(type, id)  (board_base_id | ((type)<<11) | ((id)<<6))
-#define MAKE_SEND_ID(type, id) (jetson_base_id | ((type)<<11) | ((id)<<6))
+#define MAKE_ID(type, id)  (board_base_id | ((type)<<14) | ((id)<<6))
+#define MAKE_SEND_ID(type, id) (jetson_base_id | ((type)<<14) | ((id)<<6))
 
 
 
@@ -54,6 +54,7 @@
 
 
 void stop_motors(void);
+void start_motors(void);
 
 #endif
 

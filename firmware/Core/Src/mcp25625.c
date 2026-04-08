@@ -199,7 +199,7 @@ bool MCP_init(void) {
 		return false;
 	}
 	
-	MCP_write_byte(MCP_CNF1, 0xC0);
+	MCP_write_byte(MCP_CNF1, 0x00);
 	MCP_write_byte(MCP_CNF2, 0x9E);
 	MCP_write_byte(MCP_CNF3, 0x03);
 	

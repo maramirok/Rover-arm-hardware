@@ -110,11 +110,7 @@ int main(void)
   // starting up the timers for the pwm for each motor
 
 
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+start_motors();
 
 
 // mcu startup
@@ -156,11 +152,7 @@ while (1)
                  CanFrame rx = {0};
                         if (MCP_receive_frame(&rx)) {
                             if (rx.id == RESUME_ID) {
-                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-                                HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-                                HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+                            	start_motors();
                                 break;
                             }
                         }
@@ -170,11 +162,7 @@ while (1)
          }
          else if (frame.id == RESUME_ID)
          {
-             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-             HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-             HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+        	 start_motors();
          }
          else if (frame.id == MOTOR_1_ID)
          {
@@ -269,17 +257,17 @@ while (1)
          }
      }
 
-     if (eflg & (MCP_EFLG_TXBO | MCP_EFLG_TXEP | MCP_EFLG_RXEP)) {
+     if (eflg & MCP_EFLG_TXBO ) {
          stop_motors();
          HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
 
          CanFrame error_frame = {0};
-         error_frame.id = WARNING_ID;
+         error_frame.id = ERROR_ID;
          error_frame.dlc = 4;
          error_frame.data[0] = 'E';
-         error_frame.data[1] = '0';
-         error_frame.data[2] = '0';
-         error_frame.data[3] = '1';
+         error_frame.data[1] = 'B';
+         error_frame.data[2] = 'O';
+         error_frame.data[3] = 'F';
 
          while (1) {
              HAL_IWDG_Refresh(&hiwdg);
@@ -290,16 +278,73 @@ while (1)
              if (MCP_receive_frame(&rx)) {
                  if (rx.id == RESUME_ID) {
                      MCP_recover_bus();
-                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
-                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
-                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
-                     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
-                     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+                     start_motors();
                      HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
                      break;
                  }
              }
          }
+     }
+     else if (eflg & MCP_EFLG_TXEP ) {
+    	 stop_motors();
+
+    	          CanFrame error_frame = {0};
+    	          error_frame.id = ERROR_ID;
+    	          error_frame.dlc = 4;
+    	          error_frame.data[0] = 'E';
+    	          error_frame.data[1] = 'T';
+    	          error_frame.data[2] = 'X';
+    	          error_frame.data[3] = 'P';
+
+    	          while (1) {
+    	              HAL_IWDG_Refresh(&hiwdg);
+    	              MCP_send_frame(&error_frame);
+    	              HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
+    	              HAL_Delay(1000);
+    	              HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+    	              HAL_Delay(1000);
+
+    	              CanFrame rx = {0};
+    	              if (MCP_receive_frame(&rx)) {
+    	                  if (rx.id == RESUME_ID) {
+    	                      MCP_recover_bus();
+    	                      start_motors();
+    	                      HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+    	                      break;
+    	                  }
+    	              }
+    	          }
+
+     }
+     else if (eflg & MCP_EFLG_RXEP) {
+    	 stop_motors();
+
+    	    	          CanFrame error_frame = {0};
+    	    	          error_frame.id = ERROR_ID;
+    	    	          error_frame.dlc = 4;
+    	    	          error_frame.data[0] = 'E';
+    	    	          error_frame.data[1] = 'R';
+    	    	          error_frame.data[2] = 'X';
+    	    	          error_frame.data[3] = 'P';
+
+    	    	          while (1) {
+    	    	              HAL_IWDG_Refresh(&hiwdg);
+    	    	              MCP_send_frame(&error_frame);
+    	    	              HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_RESET);
+    	    	              HAL_Delay(500);
+    	    	              HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+    	    	              HAL_Delay(500);
+
+    	    	              CanFrame rx = {0};
+    	    	              if (MCP_receive_frame(&rx)) {
+    	    	                  if (rx.id == RESUME_ID) {
+    	    	                      MCP_recover_bus();
+    	    	                      start_motors();
+    	    	                      HAL_GPIO_WritePin(GPIOB, PANIC_LED_Pin, GPIO_PIN_SET);
+    	    	                      break;
+    	    	                  }
+    	    	              }
+    	    	          }
      }
 
  }
